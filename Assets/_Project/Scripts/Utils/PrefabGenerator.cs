@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using RoguelikeCombat.UI;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
