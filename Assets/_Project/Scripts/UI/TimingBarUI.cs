@@ -27,7 +27,10 @@ namespace RoguelikeCombat.UI
         private float startX;
         private float endX;
         private Sequence currentAnimation;
-        private Tween markerMovement;
+        private Tweener markerMovement;
+        private float markerStartTime;
+        private float windowDuration;
+        private bool isWindowActive;
 
         private void Awake()
         {
@@ -38,6 +41,12 @@ namespace RoguelikeCombat.UI
             RectTransform rect = GetComponent<RectTransform>();
             startX = -rect.rect.width / 2f;
             endX = rect.rect.width / 2f;
+            
+            // Center the timing zones
+            float perfectWidth = perfectZone.rect.width;
+            float goodWidth = goodZone.rect.width;
+            perfectZone.anchoredPosition = new Vector2(0, 0);
+            goodZone.anchoredPosition = new Vector2(0, 0);
         }
 
         private void OnDestroy()
@@ -48,6 +57,10 @@ namespace RoguelikeCombat.UI
 
         public void StartTimingWindow(float duration)
         {
+            windowDuration = duration;
+            markerStartTime = Time.time;
+            isWindowActive = true;
+            
             // Reset marker position
             marker.anchoredPosition = new Vector2(startX, marker.anchoredPosition.y);
             markerImage.color = defaultColor;
@@ -55,14 +68,33 @@ namespace RoguelikeCombat.UI
             // Kill any existing movement
             markerMovement?.Kill();
             
-            // Start marker movement
+            // Start new movement
             markerMovement = marker.DOAnchorPosX(endX, duration)
                 .SetEase(Ease.Linear)
                 .OnComplete(() => EndTimingWindow());
+
+            // Reset fill bar
+            fillBar.sizeDelta = new Vector2(0, fillBar.sizeDelta.y);
+            fillBar.DOSizeDelta(new Vector2(fillBar.parent.GetComponent<RectTransform>().rect.width, fillBar.sizeDelta.y), duration)
+                .SetEase(Ease.Linear);
         }
 
-        public void EndTimingWindow()
+        public float GetTimingResult()
         {
+            if (!isWindowActive) return 1f;
+
+            // Calculate normalized position (0 = perfect center, 1 = edges)
+            float normalizedPosition = Mathf.Abs(marker.anchoredPosition.x / (endX - startX));
+            
+            // End the window
+            EndTimingWindow();
+            
+            return normalizedPosition;
+        }
+
+        private void EndTimingWindow()
+        {
+            isWindowActive = false;
             markerMovement?.Kill();
         }
 
