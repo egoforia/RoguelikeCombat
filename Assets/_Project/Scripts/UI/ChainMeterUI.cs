@@ -1,130 +1,135 @@
 using UnityEngine;
 using UnityEngine.UI;
+using System.Collections.Generic;
 using DG.Tweening;
-using RoguelikeCombat.Combat;
 
 namespace RoguelikeCombat.UI
 {
     public class ChainMeterUI : MonoBehaviour
     {
-        [Header("UI References")]
-        [SerializeField] private Transform segmentsContainer;
+        [Header("References")]
         [SerializeField] private GameObject segmentPrefab;
-        [SerializeField] private int maxSegments = 4;
+        [SerializeField] private RectTransform segmentContainer;
 
-        [Header("Visual Settings")]
-        [SerializeField] private Color perfectColor = Color.green;
-        [SerializeField] private Color goodColor = Color.yellow;
-        [SerializeField] private Color failedColor = Color.red;
-        [SerializeField] private Color inactiveColor = Color.gray;
-        [SerializeField] private float segmentScale = 1f;
-        [SerializeField] private float rotationOffset = 90f;
-        [SerializeField] private float animationDuration = 0.2f;
+        [Header("Layout Settings")]
+        [SerializeField] private float segmentSpacing = 10f;
+        [SerializeField] private float segmentSize = 30f;
+
+        [Header("Animation Settings")]
+        [SerializeField] private float animationDuration = 0.3f;
         [SerializeField] private float pulseScale = 1.2f;
         [SerializeField] private Ease pulseEase = Ease.OutBack;
-        
-        private Image[] segments;
-        private int currentChain;
-        private Sequence[] segmentAnimations;
+        [SerializeField] private Color activeColor = Color.white;
+        [SerializeField] private Color inactiveColor = Color.gray;
+
+        private List<RectTransform> segments = new List<RectTransform>();
+        private List<Image> segmentImages = new List<Image>();
+        private List<Sequence> segmentAnimations = new List<Sequence>();
+        private Vector3 originalScale;
+        private Vector3 pulseScaleVector;
+        private int maxSegments;
 
         private void Awake()
         {
-            InitializeSegments();
-            DOTween.SetTweensCapacity(500, 50);
+            originalScale = Vector3.one;
+            pulseScaleVector = Vector3.one * pulseScale;
         }
 
-        private void OnDestroy()
+        public void Initialize(int maxChainLength)
         {
-            if (segmentAnimations != null)
-            {
-                foreach (var anim in segmentAnimations)
-                {
-                    anim?.Kill();
-                }
-            }
-        }
+            maxSegments = maxChainLength;
+            ClearSegments();
 
-        private void InitializeSegments()
-        {
-            segments = new Image[maxSegments];
-            segmentAnimations = new Sequence[maxSegments];
-            float angleStep = 360f / maxSegments;
-
+            // Create all segments in inactive state
             for (int i = 0; i < maxSegments; i++)
             {
-                GameObject segment = Instantiate(segmentPrefab, segmentsContainer);
-                segment.transform.localPosition = Vector3.zero;
-                
-                // Position segments in a circle
-                float angle = i * angleStep + rotationOffset;
-                segment.transform.localRotation = Quaternion.Euler(0, 0, angle);
-                segment.transform.localScale = Vector3.one * segmentScale;
-                
-                segments[i] = segment.GetComponent<Image>();
-                segments[i].color = inactiveColor;
+                GameObject segment = Instantiate(segmentPrefab, segmentContainer);
+                RectTransform segmentTransform = segment.GetComponent<RectTransform>();
+                Image segmentImage = segment.GetComponent<Image>();
+
+                // Configure segment
+                segmentTransform.sizeDelta = new Vector2(segmentSize, segmentSize);
+                segmentTransform.anchoredPosition = new Vector2(i * (segmentSize + segmentSpacing), 0);
+                segmentImage.color = inactiveColor;
+
+                segments.Add(segmentTransform);
+                segmentImages.Add(segmentImage);
+                segmentAnimations.Add(null);
             }
         }
 
-        public void UpdateChainVisual(int chainCount, TimingResult result)
+        public void AddSegment()
         {
-            currentChain = Mathf.Min(chainCount, maxSegments);
-
-            // Update active segments
-            for (int i = 0; i < maxSegments; i++)
+            int nextIndex = segments.FindIndex(s => s.GetComponent<Image>().color == inactiveColor);
+            if (nextIndex >= 0)
             {
-                if (i < currentChain)
-                {
-                    Color targetColor = GetColorForResult(result);
-                    segments[i].DOColor(targetColor, animationDuration / 2);
-                    PulseSegment(i);
-                }
-                else
-                {
-                    segments[i].DOColor(inactiveColor, animationDuration);
-                }
+                ActivateSegment(nextIndex);
             }
-        }
-
-        private Color GetColorForResult(TimingResult result)
-        {
-            switch (result)
-            {
-                case TimingResult.Perfect:
-                    return perfectColor;
-                case TimingResult.Good:
-                    return goodColor;
-                default:
-                    return failedColor;
-            }
-        }
-
-        private void PulseSegment(int index)
-        {
-            // Kill any ongoing animation for this segment
-            segmentAnimations[index]?.Kill();
-            
-            Transform segmentTransform = segments[index].transform;
-            Vector3 originalScale = Vector3.one * segmentScale;
-            Vector3 pulseScaleVector = originalScale * pulseScale;
-
-            // Create new animation sequence
-            segmentAnimations[index] = DOTween.Sequence();
-            
-            // Scale up
-            segmentAnimations[index].Append(segmentTransform.DOScale(pulseScaleVector, animationDuration / 2)
-                .SetEase(pulseEase));
-            
-            // Scale down
-            segmentAnimations[index].Append(segmentTransform.DOScale(originalScale, animationDuration / 2)
-                .SetEase(Ease.OutQuad));
         }
 
         public void ResetChain()
         {
-            currentChain = 0;
-            foreach (var segment in segments)
+            foreach (var sequence in segmentAnimations)
             {
-                segment.DOColor(inactiveColor, animationDuration);
+                sequence?.Kill();
+            }
+            segmentAnimations.Clear();
+
+            for (int i = 0; i < segments.Count; i++)
+            {
+                segmentImages[i].color = inactiveColor;
+                segments[i].localScale = originalScale;
+                segmentAnimations.Add(null);
+            }
+        }
+
+        private void ActivateSegment(int index)
+        {
+            // Kill any existing animation
+            segmentAnimations[index]?.Kill();
+
+            // Get references
+            RectTransform segmentTransform = segments[index];
+            Image segmentImage = segmentImages[index];
+
+            // Create animation sequence
+            segmentAnimations[index] = DOTween.Sequence();
+
+            // Color transition
+            segmentAnimations[index].Join(segmentImage.DOColor(activeColor, animationDuration));
+
+            // Scale animation
+            segmentAnimations[index].Append(segmentTransform.DOScale(pulseScaleVector, animationDuration / 2)
+                .SetEase(pulseEase));
+            segmentAnimations[index].Append(segmentTransform.DOScale(originalScale, animationDuration / 2)
+                .SetEase(Ease.OutQuad));
+        }
+
+        private void ClearSegments()
+        {
+            // Kill all animations
+            foreach (var sequence in segmentAnimations)
+            {
+                sequence?.Kill();
+            }
+
+            // Clear lists
+            segments.Clear();
+            segmentImages.Clear();
+            segmentAnimations.Clear();
+
+            // Destroy existing segments
+            foreach (Transform child in segmentContainer)
+            {
+                Destroy(child.gameObject);
+            }
+        }
+
+        private void OnDestroy()
+        {
+            foreach (var sequence in segmentAnimations)
+            {
+                sequence?.Kill();
             }
         }
     }
