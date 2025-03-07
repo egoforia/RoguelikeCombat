@@ -57,7 +57,7 @@ namespace RoguelikeCombat.Utils
             // Create main container
             GameObject timingBar = new GameObject("TimingBar");
             RectTransform timingBarRect = timingBar.AddComponent<RectTransform>();
-            timingBar.AddComponent<TimingBarUI>();
+            TimingBarUI timingBarUI = timingBar.AddComponent<TimingBarUI>();
 
             // Configure main container
             timingBarRect.anchorMin = new Vector2(0.5f, 0f);
@@ -67,38 +67,40 @@ namespace RoguelikeCombat.Utils
             timingBarRect.anchoredPosition = new Vector2(0f, 100f);
 
             // Create background
-            GameObject background = CreateUIElement("Background", timingBar, new Color(0.2f, 0.2f, 0.2f));
-            background.GetComponent<RectTransform>().sizeDelta = timingBarRect.sizeDelta;
-
-            // Create good zone
-            GameObject goodZone = CreateUIElement("GoodZone", timingBar, new Color(1f, 0.8f, 0f, 0.5f));
-            RectTransform goodZoneRect = goodZone.GetComponent<RectTransform>();
-            goodZoneRect.sizeDelta = new Vector2(160f, 40f);
-
-            // Create perfect zone
-            GameObject perfectZone = CreateUIElement("PerfectZone", timingBar, new Color(0f, 1f, 0f, 0.5f));
-            RectTransform perfectZoneRect = perfectZone.GetComponent<RectTransform>();
-            perfectZoneRect.sizeDelta = new Vector2(80f, 40f);
-
-            // Create marker
-            GameObject marker = CreateUIElement("Marker", timingBar, Color.white);
-            RectTransform markerRect = marker.GetComponent<RectTransform>();
-            markerRect.sizeDelta = new Vector2(4f, 40f);
+            GameObject background = CreateUIImage("Background", timingBar, new Color(0.2f, 0.2f, 0.2f));
 
             // Create fill bar
-            GameObject fillBar = CreateUIElement("FillBar", timingBar, Color.white);
+            GameObject fillBar = CreateUIImage("FillBar", timingBar, Color.white);
             RectTransform fillBarRect = fillBar.GetComponent<RectTransform>();
-            fillBarRect.sizeDelta = new Vector2(0f, 40f);
             fillBarRect.anchorMin = new Vector2(0f, 0f);
             fillBarRect.anchorMax = new Vector2(0f, 1f);
             fillBarRect.pivot = new Vector2(0f, 0.5f);
+            fillBarRect.sizeDelta = new Vector2(0f, 0f);
+            fillBarRect.anchoredPosition = new Vector2(0f, 0f);
+
+            // Create good zone
+            GameObject goodZone = CreateUIImage("GoodZone", timingBar, new Color(1f, 0.8f, 0f, 0.5f));
+            RectTransform goodZoneRect = goodZone.GetComponent<RectTransform>();
+            goodZoneRect.sizeDelta = new Vector2(160f, 40f);
+            goodZoneRect.anchoredPosition = new Vector2(0f, 0f);
+
+            // Create perfect zone
+            GameObject perfectZone = CreateUIImage("PerfectZone", timingBar, new Color(0f, 1f, 0f, 0.5f));
+            RectTransform perfectZoneRect = perfectZone.GetComponent<RectTransform>();
+            perfectZoneRect.sizeDelta = new Vector2(80f, 40f);
+            perfectZoneRect.anchoredPosition = new Vector2(0f, 0f);
+
+            // Create marker
+            GameObject marker = CreateUIImage("Marker", timingBar, Color.white);
+            RectTransform markerRect = marker.GetComponent<RectTransform>();
+            markerRect.sizeDelta = new Vector2(4f, 40f);
+            markerRect.anchoredPosition = new Vector2(-200f, 0f);
 
             // Assign references in TimingBarUI component
-            TimingBarUI timingBarUI = timingBar.GetComponent<TimingBarUI>();
-            timingBarUI.GetType().GetField("fillBar", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.SetValue(timingBarUI, fillBarRect);
-            timingBarUI.GetType().GetField("perfectZone", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.SetValue(timingBarUI, perfectZoneRect);
-            timingBarUI.GetType().GetField("goodZone", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.SetValue(timingBarUI, goodZoneRect);
-            timingBarUI.GetType().GetField("marker", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.SetValue(timingBarUI, markerRect);
+            timingBarUI.fillBar = fillBarRect;
+            timingBarUI.perfectZone = perfectZoneRect;
+            timingBarUI.goodZone = goodZoneRect;
+            timingBarUI.marker = markerRect;
 
             // Create the prefab
             string prefabPath = "Assets/_Project/Prefabs/UI/TimingBar.prefab";
@@ -118,7 +120,7 @@ namespace RoguelikeCombat.Utils
             AssetDatabase.Refresh();
         }
 
-        private static GameObject CreateUIElement(string name, GameObject parent, Color color)
+        private static GameObject CreateUIImage(string name, GameObject parent, Color color)
         {
             GameObject obj = new GameObject(name);
             obj.transform.SetParent(parent.transform);

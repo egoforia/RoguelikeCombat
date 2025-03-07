@@ -8,10 +8,10 @@ namespace RoguelikeCombat.UI
     public class TimingBarUI : MonoBehaviour 
     {
         [Header("UI References")]
-        [SerializeField] private RectTransform fillBar;
-        [SerializeField] private RectTransform perfectZone;
-        [SerializeField] private RectTransform goodZone;
-        [SerializeField] private RectTransform marker;
+        public RectTransform fillBar;
+        public RectTransform perfectZone;
+        public RectTransform goodZone;
+        public RectTransform marker;
         
         [Header("Visual Settings")]
         [SerializeField] private Color defaultColor = Color.white;
