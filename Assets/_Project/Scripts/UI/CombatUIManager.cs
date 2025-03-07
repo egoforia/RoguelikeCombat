@@ -1,6 +1,7 @@
 using UnityEngine;
 using TMPro;
 using RoguelikeCombat.Combat;
+using RoguelikeCombat.UI;
 
 namespace RoguelikeCombat.UI
 {
