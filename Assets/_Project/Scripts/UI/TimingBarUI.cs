@@ -3,14 +3,15 @@ using UnityEngine.UI;
 using DG.Tweening;
 using RoguelikeCombat.Combat;
 
-namespace RoguelikeCombat.UI
+namespace RoguelikeCombat.UI 
 {
-    public class TimingBarUI : MonoBehaviour
+    public class TimingBarUI : MonoBehaviour 
     {
         [Header("UI References")]
         [SerializeField] private RectTransform fillBar;
         [SerializeField] private RectTransform perfectZone;
         [SerializeField] private RectTransform goodZone;
+        [SerializeField] private RectTransform marker;
         
         [Header("Visual Settings")]
         [SerializeField] private Color defaultColor = Color.white;
@@ -21,19 +22,60 @@ namespace RoguelikeCombat.UI
         [SerializeField] private float pulseScale = 1.2f;
         [SerializeField] private Ease pulseEase = Ease.OutBack;
         
+        [Header("Timing Settings")]
+        [SerializeField] private float markerSpeed = 500f; // Pixels per second
+        
+        private Image markerImage;
         private Image fillBarImage;
         private float targetWidth;
         private Sequence currentAnimation;
+        private bool isWindowActive;
+        private float windowDuration;
+        private float currentTime;
+        private float startX;
+        private float endX;
+        private Tween markerMovement;
 
         private void Awake()
         {
             fillBarImage = fillBar.GetComponent<Image>();
+            markerImage = marker.GetComponent<Image>();
             DOTween.SetTweensCapacity(500, 50);
+            
+            RectTransform rect = GetComponent<RectTransform>();
+            startX = -rect.rect.width / 2f;
+            endX = rect.rect.width / 2f;
         }
 
         private void OnDestroy()
         {
             currentAnimation?.Kill();
+            markerMovement?.Kill();
+        }
+
+        public void StartTimingWindow(float duration)
+        {
+            windowDuration = duration;
+            currentTime = 0f;
+            isWindowActive = true;
+            
+            // Reset marker position
+            marker.anchoredPosition = new Vector2(startX, marker.anchoredPosition.y);
+            markerImage.color = defaultColor;
+            
+            // Kill any existing movement
+            markerMovement?.Kill();
+            
+            // Start marker movement
+            markerMovement = marker.DOAnchorPosX(endX, duration)
+                .SetEase(Ease.Linear)
+                .OnComplete(() => EndTimingWindow());
+        }
+
+        public void EndTimingWindow()
+        {
+            isWindowActive = false;
+            markerMovement?.Kill();
         }
 
         public void SetZones(float perfectStart, float perfectEnd, float goodStart, float goodEnd)
@@ -51,13 +93,6 @@ namespace RoguelikeCombat.UI
             goodZone.anchoredPosition = new Vector2(goodStart * totalWidth, goodZone.anchoredPosition.y);
         }
 
-        public void UpdateFillAmount(float amount)
-        {
-            targetWidth = amount * GetComponent<RectTransform>().rect.width;
-            fillBar.DOSizeDelta(new Vector2(targetWidth, fillBar.sizeDelta.y), 0.1f)
-                .SetEase(Ease.OutQuad);
-        }
-
         public void ShowTimingResult(TimingResult result)
         {
             Color targetColor = GetColorForResult(result);
@@ -69,16 +104,16 @@ namespace RoguelikeCombat.UI
             currentAnimation = DOTween.Sequence();
             
             // Scale up and change color
-            currentAnimation.Append(fillBar.DOScale(Vector3.one * pulseScale, animationDuration / 2)
+            currentAnimation.Append(marker.DOScale(Vector3.one * pulseScale, animationDuration / 2)
                 .SetEase(pulseEase));
-            currentAnimation.Join(fillBarImage.DOColor(targetColor, animationDuration / 2));
+            currentAnimation.Join(markerImage.DOColor(targetColor, animationDuration / 2));
             
             // Scale down
-            currentAnimation.Append(fillBar.DOScale(Vector3.one, animationDuration / 2)
+            currentAnimation.Append(marker.DOScale(Vector3.one, animationDuration / 2)
                 .SetEase(Ease.OutQuad));
             
             // Return to default color
-            currentAnimation.Append(fillBarImage.DOColor(defaultColor, animationDuration)
+            currentAnimation.Append(markerImage.DOColor(defaultColor, animationDuration)
                 .SetEase(Ease.InOutQuad));
         }
 
