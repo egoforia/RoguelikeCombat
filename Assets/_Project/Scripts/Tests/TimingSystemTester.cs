@@ -25,9 +25,11 @@ namespace RoguelikeCombat.Tests
                 canvasObj.AddComponent<GraphicRaycaster>();
             }
 
-            // Generate timing bar prefab
-            var generator = gameObject.AddComponent<Utils.PrefabGenerator>();
+            // Generate timing bar prefab using a temporary GameObject
+            GameObject tempObj = new GameObject("TempPrefabGenerator");
+            var generator = tempObj.AddComponent<Utils.PrefabGenerator>();
             generator.GenerateTimingBarPrefab();
+            DestroyImmediate(tempObj);
 
             // Load and instantiate timing bar
             GameObject timingBarPrefab = Resources.Load<GameObject>("UI/TimingBar");

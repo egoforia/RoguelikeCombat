@@ -174,9 +174,16 @@ namespace RoguelikeCombat.Utils
         [UnityEditor.MenuItem("RoguelikeCombat/Generate UI Prefabs")]
         public static void GenerateUIPrefabs()
         {
-            PrefabGenerator generator = new PrefabGenerator();
+            // Create a temporary GameObject to hold the PrefabGenerator
+            GameObject tempObj = new GameObject("TempPrefabGenerator");
+            PrefabGenerator generator = tempObj.AddComponent<PrefabGenerator>();
+            
+            // Generate prefabs
             generator.GenerateTimingBarPrefab();
             generator.GenerateChainSegmentPrefab();
+            
+            // Clean up
+            DestroyImmediate(tempObj);
         }
 #endif
     }
