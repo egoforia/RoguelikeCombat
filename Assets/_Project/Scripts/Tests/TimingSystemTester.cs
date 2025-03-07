@@ -7,10 +7,10 @@ namespace RoguelikeCombat.Tests
     public class TimingSystemTester : MonoBehaviour
     {
         private TimingBarUI timingBar;
+        private ChainMeterUI chainMeter;
         private float lastHitTime;
         private const float CHAIN_BREAK_DELAY = 1.5f;
         private const float WINDOW_DURATION = 2f;
-        private int currentChain;
 
         private void Start()
         {
@@ -41,6 +41,19 @@ namespace RoguelikeCombat.Tests
 
             GameObject timingBarObj = Instantiate(timingBarPrefab, canvas.transform);
             timingBar = timingBarObj.GetComponent<TimingBarUI>();
+
+            // Create chain meter
+            GameObject chainMeterObj = new GameObject("ChainMeter", typeof(RectTransform), typeof(ChainMeterUI));
+            chainMeterObj.transform.SetParent(canvas.transform, false);
+            
+            RectTransform chainMeterRect = chainMeterObj.GetComponent<RectTransform>();
+            chainMeterRect.anchorMin = new Vector2(0.5f, 1f);
+            chainMeterRect.anchorMax = new Vector2(0.5f, 1f);
+            chainMeterRect.pivot = new Vector2(0.5f, 1f);
+            chainMeterRect.anchoredPosition = new Vector2(0, -50);
+            chainMeterRect.sizeDelta = new Vector2(300, 50);
+            
+            chainMeter = chainMeterObj.GetComponent<ChainMeterUI>();
 
             // Create test button
             GameObject buttonObj = new GameObject("TestButton", typeof(RectTransform), typeof(Image), typeof(Button));
@@ -82,31 +95,24 @@ namespace RoguelikeCombat.Tests
         {
             float timeSinceLastHit = Time.time - lastHitTime;
             
-            // Check for chain break
-            if (timeSinceLastHit > CHAIN_BREAK_DELAY)
-            {
-                currentChain = 0;
-                Debug.Log("Chain broken!");
-            }
-
             // Get timing result
             float result = timingBar.GetTimingResult();
+            
+            // Update chain meter
+            chainMeter.AddHit(result);
             
             // Evaluate timing
             if (result <= 0.2f) // Perfect hit
             {
-                currentChain++;
-                Debug.Log($"Perfect hit! Chain: {currentChain}");
+                Debug.Log($"Perfect hit! Timing: {result:F2}");
             }
             else if (result <= 0.4f) // Good hit
             {
-                currentChain++;
-                Debug.Log($"Good hit! Chain: {currentChain}");
+                Debug.Log($"Good hit! Timing: {result:F2}");
             }
             else // Miss
             {
-                currentChain = 0;
-                Debug.Log("Miss! Chain broken.");
+                Debug.Log($"Miss! Timing: {result:F2}");
             }
 
             // Start next window

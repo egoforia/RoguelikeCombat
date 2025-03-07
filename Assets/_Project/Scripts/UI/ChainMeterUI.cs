@@ -7,32 +7,58 @@ namespace RoguelikeCombat.UI
 {
     public class ChainMeterUI : MonoBehaviour
     {
-        [Header("References")]
-        [SerializeField] private GameObject segmentPrefab;
-        [SerializeField] private RectTransform segmentContainer;
-
-        [Header("Layout Settings")]
-        [SerializeField] private float segmentSpacing = 10f;
+        [Header("Visual Settings")]
         [SerializeField] private float segmentSize = 30f;
-
-        [Header("Animation Settings")]
-        [SerializeField] private float animationDuration = 0.3f;
-        [SerializeField] private float pulseScale = 1.2f;
-        [SerializeField] private Ease pulseEase = Ease.OutBack;
-        [SerializeField] private Color activeColor = Color.white;
+        [SerializeField] private float segmentSpacing = 10f;
+        [SerializeField] private Color activeColor = Color.yellow;
         [SerializeField] private Color inactiveColor = Color.gray;
+        [SerializeField] private float animationDuration = 0.2f;
+
+        [Header("Chain Settings")]
+        [SerializeField] private int maxSegments = 5;
+        [SerializeField] private float chainBreakDelay = 1.5f;
 
         private List<RectTransform> segments = new List<RectTransform>();
         private List<Image> segmentImages = new List<Image>();
-        private List<Sequence> segmentAnimations = new List<Sequence>();
-        private Vector3 originalScale;
-        private Vector3 pulseScaleVector;
-        private int maxSegments;
+        private List<Tweener> segmentAnimations = new List<Tweener>();
+        private RectTransform segmentContainer;
+        private GameObject segmentPrefab;
+        private int currentChain;
+        private float lastHitTime;
 
         private void Awake()
         {
-            originalScale = Vector3.one;
-            pulseScaleVector = Vector3.one * pulseScale;
+            // Create container for segments
+            GameObject containerObj = new GameObject("SegmentContainer", typeof(RectTransform));
+            containerObj.transform.SetParent(transform, false);
+            segmentContainer = containerObj.GetComponent<RectTransform>();
+            segmentContainer.anchorMin = new Vector2(0.5f, 0.5f);
+            segmentContainer.anchorMax = new Vector2(0.5f, 0.5f);
+            segmentContainer.pivot = new Vector2(0.5f, 0.5f);
+
+            // Generate and load segment prefab
+            var generator = gameObject.AddComponent<Utils.PrefabGenerator>();
+            generator.GenerateChainSegmentPrefab();
+            Destroy(generator);
+
+            segmentPrefab = Resources.Load<GameObject>("UI/ChainSegment");
+            if (segmentPrefab == null)
+            {
+                Debug.LogError("Failed to load ChainSegment prefab!");
+                return;
+            }
+
+            // Initialize segments
+            Initialize(maxSegments);
+        }
+
+        private void Update()
+        {
+            // Check for chain break
+            if (currentChain > 0 && Time.time - lastHitTime > chainBreakDelay)
+            {
+                BreakChain();
+            }
         }
 
         public void Initialize(int maxChainLength)
@@ -40,14 +66,17 @@ namespace RoguelikeCombat.UI
             maxSegments = maxChainLength;
             ClearSegments();
 
-            // Create all segments in inactive state
+            // Calculate total width
+            float totalWidth = maxSegments * (segmentSize + segmentSpacing) - segmentSpacing;
+            segmentContainer.sizeDelta = new Vector2(totalWidth, segmentSize);
+
+            // Create segments
             for (int i = 0; i < maxSegments; i++)
             {
                 GameObject segment = Instantiate(segmentPrefab, segmentContainer);
                 RectTransform segmentTransform = segment.GetComponent<RectTransform>();
                 Image segmentImage = segment.GetComponent<Image>();
 
-                // Configure segment
                 segmentTransform.sizeDelta = new Vector2(segmentSize, segmentSize);
                 segmentTransform.anchoredPosition = new Vector2(i * (segmentSize + segmentSpacing), 0);
                 segmentImage.color = inactiveColor;
@@ -58,78 +87,83 @@ namespace RoguelikeCombat.UI
             }
         }
 
-        public void AddSegment()
+        public void AddHit(float hitQuality)
         {
-            int nextIndex = segments.FindIndex(s => s.GetComponent<Image>().color == inactiveColor);
-            if (nextIndex >= 0)
+            // Reset chain if too much time has passed
+            if (Time.time - lastHitTime > chainBreakDelay && currentChain > 0)
             {
-                ActivateSegment(nextIndex);
+                BreakChain();
             }
+
+            // Add to chain if hit was good enough
+            if (hitQuality <= 0.4f) // Good or Perfect hit
+            {
+                currentChain = Mathf.Min(currentChain + 1, maxSegments);
+                UpdateVisuals();
+            }
+            else // Miss
+            {
+                BreakChain();
+            }
+
+            lastHitTime = Time.time;
         }
 
-        public void ResetChain()
+        private void UpdateVisuals()
         {
-            foreach (var sequence in segmentAnimations)
-            {
-                sequence?.Kill();
-            }
-            segmentAnimations.Clear();
-
             for (int i = 0; i < segments.Count; i++)
             {
-                segmentImages[i].color = inactiveColor;
-                segments[i].localScale = originalScale;
-                segmentAnimations.Add(null);
+                bool isActive = i < currentChain;
+                Color targetColor = isActive ? activeColor : inactiveColor;
+
+                // Kill existing animation
+                segmentAnimations[i]?.Kill();
+
+                // Animate color change
+                segmentAnimations[i] = segmentImages[i].DOColor(targetColor, animationDuration)
+                    .SetEase(Ease.OutQuad);
+
+                // Animate scale
+                segments[i].DOScale(isActive ? 1.2f : 1f, animationDuration)
+                    .SetEase(isActive ? Ease.OutBack : Ease.OutQuad);
             }
         }
 
-        private void ActivateSegment(int index)
+        private void BreakChain()
         {
-            // Kill any existing animation
-            segmentAnimations[index]?.Kill();
-
-            // Get references
-            RectTransform segmentTransform = segments[index];
-            Image segmentImage = segmentImages[index];
-
-            // Create animation sequence
-            segmentAnimations[index] = DOTween.Sequence();
-
-            // Color transition
-            segmentAnimations[index].Join(segmentImage.DOColor(activeColor, animationDuration));
-
-            // Scale animation
-            segmentAnimations[index].Append(segmentTransform.DOScale(pulseScaleVector, animationDuration / 2)
-                .SetEase(pulseEase));
-            segmentAnimations[index].Append(segmentTransform.DOScale(originalScale, animationDuration / 2)
-                .SetEase(Ease.OutQuad));
+            if (currentChain > 0)
+            {
+                currentChain = 0;
+                UpdateVisuals();
+            }
         }
 
         private void ClearSegments()
         {
-            // Kill all animations
-            foreach (var sequence in segmentAnimations)
+            foreach (var segment in segments)
             {
-                sequence?.Kill();
+                if (segment != null)
+                {
+                    Destroy(segment.gameObject);
+                }
             }
 
-            // Clear lists
+            foreach (var anim in segmentAnimations)
+            {
+                anim?.Kill();
+            }
+
             segments.Clear();
             segmentImages.Clear();
             segmentAnimations.Clear();
-
-            // Destroy existing segments
-            foreach (Transform child in segmentContainer)
-            {
-                Destroy(child.gameObject);
-            }
+            currentChain = 0;
         }
 
         private void OnDestroy()
         {
-            foreach (var sequence in segmentAnimations)
+            foreach (var anim in segmentAnimations)
             {
-                sequence?.Kill();
+                anim?.Kill();
             }
         }
     }
