@@ -1,202 +1,182 @@
 using UnityEngine;
 using UnityEngine.UI;
 using RoguelikeCombat.UI;
-#if UNITY_EDITOR
-using UnityEditor;
-#endif
 
 namespace RoguelikeCombat.Utils
 {
     public class PrefabGenerator : MonoBehaviour
     {
-#if UNITY_EDITOR
-        [MenuItem("RoguelikeCombat/Generate UI Prefabs")]
-        public static void GenerateUIPrefabs()
+        private const string PREFAB_PATH = "Assets/_Project/Prefabs/UI/";
+        private const string RESOURCES_PATH = "Assets/_Project/Resources/UI/";
+
+        public void GenerateTimingBarPrefab()
         {
-            CreateChainSegmentPrefab();
-            CreateTimingBarPrefab();
-        }
+            // Create root object
+            GameObject timingBarObj = new GameObject("TimingBar", typeof(RectTransform), typeof(TimingBarUI));
+            RectTransform timingBarRect = timingBarObj.GetComponent<RectTransform>();
+            TimingBarUI timingBarUI = timingBarObj.GetComponent<TimingBarUI>();
 
-        private static void CreateChainSegmentPrefab()
-        {
-            // Create the segment GameObject
-            GameObject segment = new GameObject("ChainSegment");
-            RectTransform rectTransform = segment.AddComponent<RectTransform>();
-            Image image = segment.AddComponent<Image>();
-
-            // Configure the RectTransform
-            rectTransform.anchorMin = new Vector2(0.5f, 0.5f);
-            rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
-            rectTransform.pivot = new Vector2(0.5f, 0.5f);
-            rectTransform.sizeDelta = new Vector2(30f, 30f); // Size of the segment
-
-            // Configure the Image component
-            image.sprite = CreateCircleSprite();
-            image.color = Color.gray;
-            image.type = Image.Type.Simple;
-
-            // Create the prefab
-            string prefabPath = "Assets/_Project/Prefabs/UI/ChainSegment.prefab";
-            
-            // Ensure the directory exists
-            string directory = System.IO.Path.GetDirectoryName(prefabPath);
-            if (!System.IO.Directory.Exists(directory))
-            {
-                System.IO.Directory.CreateDirectory(directory);
-            }
-
-            // Create the prefab asset
-            PrefabUtility.SaveAsPrefabAsset(segment, prefabPath);
-            DestroyImmediate(segment);
-
-            Debug.Log("Chain segment prefab created at: " + prefabPath);
-        }
-
-        private static void CreateTimingBarPrefab()
-        {
-            // Create main container
-            GameObject timingBar = new GameObject("TimingBar");
-            RectTransform timingBarRect = timingBar.AddComponent<RectTransform>();
-            TimingBarUI timingBarUI = timingBar.AddComponent<TimingBarUI>();
-
-            // Configure main container
-            timingBarRect.anchorMin = new Vector2(0.5f, 0f);
-            timingBarRect.anchorMax = new Vector2(0.5f, 0f);
-            timingBarRect.pivot = new Vector2(0.5f, 0f);
-            timingBarRect.sizeDelta = new Vector2(400f, 40f);
-            timingBarRect.anchoredPosition = new Vector2(0f, 100f);
+            // Set RectTransform properties
+            timingBarRect.anchorMin = new Vector2(0.5f, 0.5f);
+            timingBarRect.anchorMax = new Vector2(0.5f, 0.5f);
+            timingBarRect.pivot = new Vector2(0.5f, 0.5f);
+            timingBarRect.sizeDelta = new Vector2(300f, 30f);
 
             // Create background
-            GameObject background = CreateUIImage("Background", timingBar, new Color(0.2f, 0.2f, 0.2f));
+            GameObject bgObj = new GameObject("Background", typeof(RectTransform), typeof(Image));
+            RectTransform bgRect = bgObj.GetComponent<RectTransform>();
+            Image bgImage = bgObj.GetComponent<Image>();
+            bgObj.transform.SetParent(timingBarObj.transform, false);
+            
+            bgRect.anchorMin = Vector2.zero;
+            bgRect.anchorMax = Vector2.one;
+            bgRect.sizeDelta = Vector2.zero;
+            bgImage.color = new Color(0.2f, 0.2f, 0.2f, 0.8f);
 
             // Create fill bar
-            GameObject fillBar = CreateUIImage("FillBar", timingBar, Color.white);
-            RectTransform fillBarRect = fillBar.GetComponent<RectTransform>();
-            fillBarRect.anchorMin = new Vector2(0f, 0f);
-            fillBarRect.anchorMax = new Vector2(0f, 1f);
-            fillBarRect.pivot = new Vector2(0f, 0.5f);
-            fillBarRect.sizeDelta = new Vector2(0f, 0f);
-            fillBarRect.anchoredPosition = new Vector2(0f, 0f);
+            GameObject fillObj = new GameObject("FillBar", typeof(RectTransform), typeof(Image));
+            RectTransform fillRect = fillObj.GetComponent<RectTransform>();
+            Image fillImage = fillObj.GetComponent<Image>();
+            fillObj.transform.SetParent(timingBarObj.transform, false);
+            
+            fillRect.anchorMin = new Vector2(0f, 0f);
+            fillRect.anchorMax = new Vector2(0f, 1f);
+            fillRect.pivot = new Vector2(0f, 0.5f);
+            fillRect.sizeDelta = new Vector2(0f, 0f);
+            fillImage.color = Color.white;
 
             // Create good zone
-            GameObject goodZone = CreateUIImage("GoodZone", timingBar, new Color(1f, 0.8f, 0f, 0.5f));
-            RectTransform goodZoneRect = goodZone.GetComponent<RectTransform>();
-            goodZoneRect.sizeDelta = new Vector2(160f, 40f);
-            goodZoneRect.anchoredPosition = new Vector2(0f, 0f);
+            GameObject goodObj = new GameObject("GoodZone", typeof(RectTransform), typeof(Image));
+            RectTransform goodRect = goodObj.GetComponent<RectTransform>();
+            Image goodImage = goodObj.GetComponent<Image>();
+            goodObj.transform.SetParent(timingBarObj.transform, false);
+            
+            goodRect.anchorMin = new Vector2(0.3f, 0f);
+            goodRect.anchorMax = new Vector2(0.7f, 1f);
+            goodRect.sizeDelta = Vector2.zero;
+            goodImage.color = new Color(0f, 1f, 0f, 0.3f);
 
             // Create perfect zone
-            GameObject perfectZone = CreateUIImage("PerfectZone", timingBar, new Color(0f, 1f, 0f, 0.5f));
-            RectTransform perfectZoneRect = perfectZone.GetComponent<RectTransform>();
-            perfectZoneRect.sizeDelta = new Vector2(80f, 40f);
-            perfectZoneRect.anchoredPosition = new Vector2(0f, 0f);
+            GameObject perfectObj = new GameObject("PerfectZone", typeof(RectTransform), typeof(Image));
+            RectTransform perfectRect = perfectObj.GetComponent<RectTransform>();
+            Image perfectImage = perfectObj.GetComponent<Image>();
+            perfectObj.transform.SetParent(timingBarObj.transform, false);
+            
+            perfectRect.anchorMin = new Vector2(0.4f, 0f);
+            perfectRect.anchorMax = new Vector2(0.6f, 1f);
+            perfectRect.sizeDelta = Vector2.zero;
+            perfectImage.color = new Color(1f, 1f, 0f, 0.5f);
 
             // Create marker
-            GameObject marker = CreateUIImage("Marker", timingBar, Color.white);
-            RectTransform markerRect = marker.GetComponent<RectTransform>();
-            markerRect.sizeDelta = new Vector2(4f, 40f);
-            markerRect.anchoredPosition = new Vector2(-200f, 0f);
+            GameObject markerObj = new GameObject("Marker", typeof(RectTransform), typeof(Image));
+            RectTransform markerRect = markerObj.GetComponent<RectTransform>();
+            Image markerImage = markerObj.GetComponent<Image>();
+            markerObj.transform.SetParent(timingBarObj.transform, false);
+            
+            markerRect.anchorMin = new Vector2(0f, 0f);
+            markerRect.anchorMax = new Vector2(0f, 1f);
+            markerRect.pivot = new Vector2(0.5f, 0.5f);
+            markerRect.sizeDelta = new Vector2(4f, 0f);
+            markerImage.color = Color.red;
 
-            // Assign references in TimingBarUI component
-            timingBarUI.fillBar = fillBarRect;
-            timingBarUI.perfectZone = perfectZoneRect;
-            timingBarUI.goodZone = goodZoneRect;
+            // Assign references
+            timingBarUI.fillBar = fillRect;
+            timingBarUI.perfectZone = perfectRect;
+            timingBarUI.goodZone = goodRect;
             timingBarUI.marker = markerRect;
 
-            // Create the prefab
-            string prefabPath = "Assets/_Project/Prefabs/UI/TimingBar.prefab";
-            
-            // Ensure the directory exists
-            string directory = System.IO.Path.GetDirectoryName(prefabPath);
-            if (!System.IO.Directory.Exists(directory))
+            // Save prefab
+            #if UNITY_EDITOR
+            if (!System.IO.Directory.Exists(PREFAB_PATH))
             {
-                System.IO.Directory.CreateDirectory(directory);
+                System.IO.Directory.CreateDirectory(PREFAB_PATH);
+            }
+            if (!System.IO.Directory.Exists(RESOURCES_PATH))
+            {
+                System.IO.Directory.CreateDirectory(RESOURCES_PATH);
             }
 
-            // Create the prefab asset
-            PrefabUtility.SaveAsPrefabAsset(timingBar, prefabPath);
-            DestroyImmediate(timingBar);
-
-            Debug.Log("Timing bar prefab created at: " + prefabPath);
-            AssetDatabase.Refresh();
+            // Save to Prefabs folder
+            UnityEditor.PrefabUtility.SaveAsPrefabAsset(timingBarObj, PREFAB_PATH + "TimingBar.prefab");
+            
+            // Copy to Resources folder
+            System.IO.File.Copy(PREFAB_PATH + "TimingBar.prefab", RESOURCES_PATH + "TimingBar.prefab", true);
+            
+            DestroyImmediate(timingBarObj);
+            UnityEditor.AssetDatabase.Refresh();
+            #endif
         }
 
-        private static GameObject CreateUIImage(string name, GameObject parent, Color color)
+        public void GenerateChainSegmentPrefab()
         {
-            GameObject obj = new GameObject(name);
-            obj.transform.SetParent(parent.transform);
-            
-            RectTransform rect = obj.AddComponent<RectTransform>();
-            rect.localPosition = Vector3.zero;
-            rect.localScale = Vector3.one;
-            rect.anchorMin = Vector2.zero;
-            rect.anchorMax = Vector2.one;
-            rect.offsetMin = Vector2.zero;
-            rect.offsetMax = Vector2.zero;
-            
-            Image image = obj.AddComponent<Image>();
-            image.color = color;
-            
-            return obj;
-        }
+            // Create root object with RectTransform and Image
+            GameObject segmentObj = new GameObject("ChainSegment", typeof(RectTransform), typeof(Image));
+            RectTransform segmentRect = segmentObj.GetComponent<RectTransform>();
+            Image segmentImage = segmentObj.GetComponent<Image>();
 
-        private static Sprite CreateCircleSprite()
-        {
-            // Create a circular texture
-            int size = 128;
-            Texture2D texture = new Texture2D(size, size);
-            Color[] colors = new Color[size * size];
-            Vector2 center = new Vector2(size / 2f, size / 2f);
-            float radius = size / 2f;
+            // Set RectTransform properties
+            segmentRect.anchorMin = new Vector2(0.5f, 0.5f);
+            segmentRect.anchorMax = new Vector2(0.5f, 0.5f);
+            segmentRect.pivot = new Vector2(0.5f, 0.5f);
+            segmentRect.sizeDelta = new Vector2(30f, 30f);
 
-            for (int y = 0; y < size; y++)
+            // Set Image properties
+            segmentImage.sprite = GenerateCircleSprite();
+            segmentImage.color = Color.white;
+
+            // Save prefab
+            #if UNITY_EDITOR
+            if (!System.IO.Directory.Exists(PREFAB_PATH))
             {
-                for (int x = 0; x < size; x++)
+                System.IO.Directory.CreateDirectory(PREFAB_PATH);
+            }
+            if (!System.IO.Directory.Exists(RESOURCES_PATH))
+            {
+                System.IO.Directory.CreateDirectory(RESOURCES_PATH);
+            }
+
+            // Save to Prefabs folder
+            UnityEditor.PrefabUtility.SaveAsPrefabAsset(segmentObj, PREFAB_PATH + "ChainSegment.prefab");
+            
+            // Copy to Resources folder
+            System.IO.File.Copy(PREFAB_PATH + "ChainSegment.prefab", RESOURCES_PATH + "ChainSegment.prefab", true);
+            
+            DestroyImmediate(segmentObj);
+            UnityEditor.AssetDatabase.Refresh();
+            #endif
+        }
+
+        private Sprite GenerateCircleSprite()
+        {
+            const int TEXTURE_SIZE = 32;
+            const int CIRCLE_RADIUS = 14;
+            
+            Texture2D texture = new Texture2D(TEXTURE_SIZE, TEXTURE_SIZE);
+            Color[] colors = new Color[TEXTURE_SIZE * TEXTURE_SIZE];
+            Vector2 center = new Vector2(TEXTURE_SIZE / 2f, TEXTURE_SIZE / 2f);
+            
+            for (int x = 0; x < TEXTURE_SIZE; x++)
+            {
+                for (int y = 0; y < TEXTURE_SIZE; y++)
                 {
                     float distance = Vector2.Distance(new Vector2(x, y), center);
-                    float alpha = distance <= radius ? 1f : 0f;
-                    
-                    // Add a slight gradient for better visual
-                    if (alpha > 0f)
-                    {
-                        alpha = Mathf.Lerp(1f, 0.8f, distance / radius);
-                    }
-                    
-                    colors[y * size + x] = new Color(1f, 1f, 1f, alpha);
+                    colors[y * TEXTURE_SIZE + x] = distance <= CIRCLE_RADIUS ? Color.white : Color.clear;
                 }
             }
-
+            
             texture.SetPixels(colors);
             texture.Apply();
-
-            // Save the texture as an asset
-            string texturePath = "Assets/_Project/Textures/UI/CircleSegment.png";
             
-            // Ensure the directory exists
-            string directory = System.IO.Path.GetDirectoryName(texturePath);
-            if (!System.IO.Directory.Exists(directory))
-            {
-                System.IO.Directory.CreateDirectory(directory);
-            }
+            return Sprite.Create(texture, new Rect(0, 0, TEXTURE_SIZE, TEXTURE_SIZE), new Vector2(0.5f, 0.5f), 100f);
+        }
 
-            // Save the texture asset
-            byte[] pngData = texture.EncodeToPNG();
-            System.IO.File.WriteAllBytes(texturePath, pngData);
-            AssetDatabase.Refresh();
-
-            // Load and configure the texture
-            TextureImporter importer = AssetImporter.GetAtPath(texturePath) as TextureImporter;
-            if (importer != null)
-            {
-                importer.textureType = TextureImporterType.Sprite;
-                importer.spritePixelsPerUnit = 100;
-                importer.mipmapEnabled = false;
-                importer.filterMode = FilterMode.Bilinear;
-                importer.textureCompression = TextureImporterCompression.Compressed;
-                importer.SaveAndReimport();
-            }
-
-            // Create and return the sprite
-            return AssetDatabase.LoadAssetAtPath<Sprite>(texturePath);
+#if UNITY_EDITOR
+        [UnityEditor.MenuItem("RoguelikeCombat/Generate UI Prefabs")]
+        public static void GenerateUIPrefabs()
+        {
+            PrefabGenerator generator = new PrefabGenerator();
+            generator.GenerateTimingBarPrefab();
+            generator.GenerateChainSegmentPrefab();
         }
 #endif
     }

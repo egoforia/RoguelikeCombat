@@ -4,13 +4,12 @@ using RoguelikeCombat.UI;
 
 namespace RoguelikeCombat.Tests
 {
-    public class TimingSystemTester : MonoBehaviour
+    public class TimingBarTester : MonoBehaviour
     {
         private TimingBarUI timingBar;
+        private Button testButton;
         private float lastHitTime;
         private const float CHAIN_BREAK_DELAY = 1.5f;
-        private const float WINDOW_DURATION = 2f;
-        private int currentChain;
 
         private void Start()
         {
@@ -54,8 +53,8 @@ namespace RoguelikeCombat.Tests
             Image buttonImage = buttonObj.GetComponent<Image>();
             buttonImage.color = new Color(0.2f, 0.2f, 0.2f);
 
-            Button button = buttonObj.GetComponent<Button>();
-            button.onClick.AddListener(OnTestButtonClick);
+            testButton = buttonObj.GetComponent<Button>();
+            testButton.onClick.AddListener(OnTestButtonClick);
 
             // Add button text
             GameObject textObj = new GameObject("Text", typeof(RectTransform), typeof(TMPro.TextMeshProUGUI));
@@ -71,50 +70,27 @@ namespace RoguelikeCombat.Tests
             text.color = Color.white;
             text.alignment = TMPro.TextAlignmentOptions.Center;
             text.fontSize = 16;
-
-            // Start first timing window
-            StartNewTimingWindow();
         }
 
         private void OnTestButtonClick()
         {
             float timeSinceLastHit = Time.time - lastHitTime;
-            
-            // Check for chain break
             if (timeSinceLastHit > CHAIN_BREAK_DELAY)
             {
-                currentChain = 0;
-                Debug.Log("Chain broken!");
+                // Start new timing window
+                timingBar.StartTimingWindow(2f);
+            }
+            else
+            {
+                // Get timing result
+                float result = timingBar.GetTimingResult();
+                Debug.Log($"Hit timing result: {result}");
+
+                // Start next window
+                timingBar.StartTimingWindow(2f);
             }
 
-            // Get timing result
-            float result = timingBar.GetTimingResult();
-            
-            // Evaluate timing
-            if (result <= 0.2f) // Perfect hit
-            {
-                currentChain++;
-                Debug.Log($"Perfect hit! Chain: {currentChain}");
-            }
-            else if (result <= 0.4f) // Good hit
-            {
-                currentChain++;
-                Debug.Log($"Good hit! Chain: {currentChain}");
-            }
-            else // Miss
-            {
-                currentChain = 0;
-                Debug.Log("Miss! Chain broken.");
-            }
-
-            // Start next window
-            StartNewTimingWindow();
             lastHitTime = Time.time;
-        }
-
-        private void StartNewTimingWindow()
-        {
-            timingBar.StartTimingWindow(WINDOW_DURATION);
         }
     }
 }
