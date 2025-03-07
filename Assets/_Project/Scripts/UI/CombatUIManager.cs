@@ -61,21 +61,22 @@ namespace RoguelikeCombat.UI
                 feedback = "Perfect!";
                 feedbackColor = Color.green;
                 currentChain++;
-                chainMeter.AddSegment();
             }
             else if (result <= goodWindowPercentage)
             {
                 feedback = "Good";
                 feedbackColor = Color.yellow;
                 currentChain++;
-                chainMeter.AddSegment();
             }
             else
             {
                 feedback = "Miss";
                 feedbackColor = Color.red;
-                BreakChain();
+                currentChain = 0;
             }
+
+            // Update chain meter with hit result
+            chainMeter.AddHit(result);
 
             feedbackText.text = feedback;
             feedbackText.color = feedbackColor;
@@ -88,7 +89,7 @@ namespace RoguelikeCombat.UI
         {
             currentChain = 0;
             chainText.text = "Chain: 0";
-            chainMeter.ResetChain();
+            chainMeter.AddHit(1f); // Force a miss to break the chain
         }
     }
 }
