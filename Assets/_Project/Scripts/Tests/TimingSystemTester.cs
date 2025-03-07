@@ -1,85 +1,98 @@
 using UnityEngine;
-using UnityEngine.InputSystem;
-using RoguelikeCombat.Combat;
+using UnityEngine.UI;
 using RoguelikeCombat.UI;
+using TMPro;
+using UnityEngine.InputSystem;
 
 namespace RoguelikeCombat.Tests
 {
     public class TimingSystemTester : MonoBehaviour
     {
-        [Header("References")]
-        [SerializeField] private TimingBarUI timingBarUI;
-        [SerializeField] private ChainMeterUI chainMeterUI;
+        [Header("UI References")]
+        [SerializeField] private TimingBarUI timingBar;
+        [SerializeField] private ChainMeterUI chainMeter;
+        [SerializeField] private TextMeshProUGUI feedbackText;
+        [SerializeField] private TextMeshProUGUI chainText;
 
-        [Header("Test Settings")]
-        [SerializeField] private float timingWindowDuration = 1f;
-        [SerializeField] private KeyCode testKey = KeyCode.Space;
-        [SerializeField] private float perfectThreshold = 0.1f;
-        [SerializeField] private float goodThreshold = 0.2f;
+        [Header("Timing Settings")]
+        [SerializeField] private float timingWindowDuration = 2f;
+        [SerializeField] private float perfectWindowPercentage = 0.2f;
+        [SerializeField] private float goodWindowPercentage = 0.4f;
 
-        private bool isWindowActive;
-        private float windowStartTime;
+        [Header("Chain Settings")]
+        [SerializeField] private int maxChainLength = 5;
+        [SerializeField] private float chainBreakDelay = 1.5f;
+
         private int currentChain;
+        private bool isTimingActive;
+        private float lastHitTime;
+
+        private void Start()
+        {
+            chainMeter.Initialize(maxChainLength);
+            StartNewTimingWindow();
+        }
 
         private void Update()
         {
-            if (Input.GetKeyDown(testKey))
+            if (isTimingActive && Keyboard.current.spaceKey.wasPressedThisFrame)
             {
-                if (!isWindowActive)
-                {
-                    StartTimingWindow();
-                }
-                else
-                {
-                    CheckTiming();
-                }
+                HandleTimingInput();
+            }
+
+            // Auto-break chain if too much time has passed
+            if (currentChain > 0 && Time.time - lastHitTime > chainBreakDelay)
+            {
+                BreakChain();
             }
         }
 
-        private void StartTimingWindow()
+        private void HandleTimingInput()
         {
-            isWindowActive = true;
-            windowStartTime = Time.time;
-            timingBarUI.StartTimingWindow(timingWindowDuration);
+            float result = timingBar.GetTimingResult();
+            string feedback;
+            Color feedbackColor;
 
-            // Set timing zones
-            float perfectStart = 0.4f;
-            float perfectEnd = 0.6f;
-            float goodStart = 0.3f;
-            float goodEnd = 0.7f;
-            timingBarUI.SetZones(goodStart, goodEnd, perfectStart, perfectEnd);
-        }
-
-        private void CheckTiming()
-        {
-            float elapsedTime = Time.time - windowStartTime;
-            float normalizedTime = elapsedTime / timingWindowDuration;
-            TimingResult result;
-
-            // Calculate timing result
-            if (normalizedTime >= 0.4f && normalizedTime <= 0.6f)
+            if (result <= perfectWindowPercentage)
             {
-                result = TimingResult.Perfect;
+                feedback = "Perfect!";
+                feedbackColor = Color.green;
                 currentChain++;
+                chainMeter.AddSegment();
             }
-            else if (normalizedTime >= 0.3f && normalizedTime <= 0.7f)
+            else if (result <= goodWindowPercentage)
             {
-                result = TimingResult.Good;
+                feedback = "Good";
+                feedbackColor = Color.yellow;
                 currentChain++;
+                chainMeter.AddSegment();
             }
             else
             {
-                result = TimingResult.Miss;
-                currentChain = 0;
+                feedback = "Miss";
+                feedbackColor = Color.red;
+                BreakChain();
             }
 
-            // Show results
-            timingBarUI.ShowTimingResult(result);
-            chainMeterUI.UpdateChainVisual(currentChain, result);
+            feedbackText.text = feedback;
+            feedbackText.color = feedbackColor;
+            chainText.text = $"Chain: {currentChain}";
+            lastHitTime = Time.time;
 
-            // End window
-            isWindowActive = false;
-            timingBarUI.EndTimingWindow();
+            StartNewTimingWindow();
+        }
+
+        private void StartNewTimingWindow()
+        {
+            isTimingActive = true;
+            timingBar.StartTimingWindow(timingWindowDuration);
+        }
+
+        private void BreakChain()
+        {
+            currentChain = 0;
+            chainText.text = "Chain: 0";
+            chainMeter.ResetChain();
         }
     }
 }
