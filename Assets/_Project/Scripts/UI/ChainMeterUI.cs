@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using System.Collections;
 using RoguelikeCombat.Combat;
 
 namespace RoguelikeCombat.UI
@@ -17,6 +18,7 @@ namespace RoguelikeCombat.UI
         [SerializeField] private Color failedColor = Color.red;
         [SerializeField] private float segmentScale = 1f;
         [SerializeField] private float rotationOffset = 90f;
+        [SerializeField] private float pulseDuration = 0.2f;
         
         private Image[] segments;
         private int currentChain;
@@ -42,6 +44,7 @@ namespace RoguelikeCombat.UI
                 
                 segments[i] = segment.GetComponent<Image>();
                 segments[i].color = Color.gray;
+                segment.transform.localScale = Vector3.one * segmentScale;
             }
         }
 
@@ -55,7 +58,7 @@ namespace RoguelikeCombat.UI
                 if (i < currentChain)
                 {
                     segments[i].color = GetColorForResult(result);
-                    PulseSegment(segments[i].gameObject);
+                    StartCoroutine(PulseSegment(segments[i].gameObject));
                 }
                 else
                 {
@@ -77,16 +80,33 @@ namespace RoguelikeCombat.UI
             }
         }
 
-        private void PulseSegment(GameObject segment)
+        private IEnumerator PulseSegment(GameObject segment)
         {
+            Vector3 originalScale = segment.transform.localScale;
+            Vector3 pulseScale = originalScale * 1.2f;
+            float elapsedTime = 0f;
+
             // Scale up
-            LeanTween.scale(segment, Vector3.one * (segmentScale + 0.2f), 0.1f)
-                .setEase(LeanTweenType.easeOutQuad)
-                .setOnComplete(() => {
-                    // Scale back to normal
-                    LeanTween.scale(segment, Vector3.one * segmentScale, 0.1f)
-                        .setEase(LeanTweenType.easeInQuad);
-                });
+            while (elapsedTime < pulseDuration / 2)
+            {
+                elapsedTime += Time.deltaTime;
+                float t = elapsedTime / (pulseDuration / 2);
+                segment.transform.localScale = Vector3.Lerp(originalScale, pulseScale, t);
+                yield return null;
+            }
+
+            elapsedTime = 0f;
+
+            // Scale down
+            while (elapsedTime < pulseDuration / 2)
+            {
+                elapsedTime += Time.deltaTime;
+                float t = elapsedTime / (pulseDuration / 2);
+                segment.transform.localScale = Vector3.Lerp(pulseScale, originalScale, t);
+                yield return null;
+            }
+
+            segment.transform.localScale = originalScale;
         }
 
         public void ResetChain()

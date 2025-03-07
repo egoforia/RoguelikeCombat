@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using System.Collections;
 using RoguelikeCombat.Combat;
 
 namespace RoguelikeCombat.UI
@@ -29,6 +30,7 @@ namespace RoguelikeCombat.UI
         private float currentTime;
         private Vector2 startPosition;
         private Vector2 endPosition;
+        private Coroutine pulseCoroutine;
 
         private void Awake()
         {
@@ -55,7 +57,7 @@ namespace RoguelikeCombat.UI
         {
             Color resultColor = GetColorForResult(result);
             SetMarkerColor(resultColor);
-            PulseMarker();
+            PulseMarker(result);
         }
 
         private void Update()
@@ -102,14 +104,57 @@ namespace RoguelikeCombat.UI
             }
         }
 
-        private void PulseMarker()
+        private void PulseMarker(TimingResult result)
         {
-            LeanTween.scale(markerRect.gameObject, Vector3.one * pulseScale, pulseDuration / 2f)
-                .setEase(LeanTweenType.easeOutQuad)
-                .setOnComplete(() => {
-                    LeanTween.scale(markerRect.gameObject, Vector3.one, pulseDuration / 2f)
-                        .setEase(LeanTweenType.easeInQuad);
-                });
+            if (pulseCoroutine != null)
+            {
+                StopCoroutine(pulseCoroutine);
+            }
+            pulseCoroutine = StartCoroutine(PulseMarkerCoroutine(result));
+        }
+
+        private IEnumerator PulseMarkerCoroutine(TimingResult result)
+        {
+            Color targetColor = GetColorForResult(result);
+            Vector3 originalScale = markerRect.localScale;
+            Vector3 pulseScaleVector = originalScale * pulseScale;
+            float elapsedTime = 0f;
+
+            // Scale up
+            while (elapsedTime < pulseDuration / 2)
+            {
+                elapsedTime += Time.deltaTime;
+                float t = elapsedTime / (pulseDuration / 2);
+                markerRect.localScale = Vector3.Lerp(originalScale, pulseScaleVector, t);
+                markerImage.color = Color.Lerp(markerImage.color, targetColor, t);
+                yield return null;
+            }
+
+            elapsedTime = 0f;
+
+            // Scale down
+            while (elapsedTime < pulseDuration / 2)
+            {
+                elapsedTime += Time.deltaTime;
+                float t = elapsedTime / (pulseDuration / 2);
+                markerRect.localScale = Vector3.Lerp(pulseScaleVector, originalScale, t);
+                yield return null;
+            }
+
+            markerRect.localScale = originalScale;
+            yield return new WaitForSeconds(0.1f);
+            
+            // Fade back to default color
+            elapsedTime = 0f;
+            while (elapsedTime < pulseDuration)
+            {
+                elapsedTime += Time.deltaTime;
+                float t = elapsedTime / pulseDuration;
+                markerImage.color = Color.Lerp(targetColor, normalColor, t);
+                yield return null;
+            }
+            
+            markerImage.color = normalColor;
         }
     }
 }
