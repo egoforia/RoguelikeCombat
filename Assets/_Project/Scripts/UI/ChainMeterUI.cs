@@ -1,6 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
-using System.Collections;
+using DG.Tweening;
 using RoguelikeCombat.Combat;
 
 namespace RoguelikeCombat.UI
@@ -16,21 +16,38 @@ namespace RoguelikeCombat.UI
         [SerializeField] private Color perfectColor = Color.green;
         [SerializeField] private Color goodColor = Color.yellow;
         [SerializeField] private Color failedColor = Color.red;
+        [SerializeField] private Color inactiveColor = Color.gray;
         [SerializeField] private float segmentScale = 1f;
         [SerializeField] private float rotationOffset = 90f;
-        [SerializeField] private float pulseDuration = 0.2f;
+        [SerializeField] private float animationDuration = 0.2f;
+        [SerializeField] private float pulseScale = 1.2f;
+        [SerializeField] private Ease pulseEase = Ease.OutBack;
         
         private Image[] segments;
         private int currentChain;
+        private Sequence[] segmentAnimations;
 
         private void Awake()
         {
             InitializeSegments();
+            DOTween.SetTweensCapacity(500, 50);
+        }
+
+        private void OnDestroy()
+        {
+            if (segmentAnimations != null)
+            {
+                foreach (var anim in segmentAnimations)
+                {
+                    anim?.Kill();
+                }
+            }
         }
 
         private void InitializeSegments()
         {
             segments = new Image[maxSegments];
+            segmentAnimations = new Sequence[maxSegments];
             float angleStep = 360f / maxSegments;
 
             for (int i = 0; i < maxSegments; i++)
@@ -41,10 +58,10 @@ namespace RoguelikeCombat.UI
                 // Position segments in a circle
                 float angle = i * angleStep + rotationOffset;
                 segment.transform.localRotation = Quaternion.Euler(0, 0, angle);
+                segment.transform.localScale = Vector3.one * segmentScale;
                 
                 segments[i] = segment.GetComponent<Image>();
-                segments[i].color = Color.gray;
-                segment.transform.localScale = Vector3.one * segmentScale;
+                segments[i].color = inactiveColor;
             }
         }
 
@@ -57,12 +74,13 @@ namespace RoguelikeCombat.UI
             {
                 if (i < currentChain)
                 {
-                    segments[i].color = GetColorForResult(result);
-                    StartCoroutine(PulseSegment(segments[i].gameObject));
+                    Color targetColor = GetColorForResult(result);
+                    segments[i].DOColor(targetColor, animationDuration / 2);
+                    PulseSegment(i);
                 }
                 else
                 {
-                    segments[i].color = Color.gray;
+                    segments[i].DOColor(inactiveColor, animationDuration);
                 }
             }
         }
@@ -80,33 +98,25 @@ namespace RoguelikeCombat.UI
             }
         }
 
-        private IEnumerator PulseSegment(GameObject segment)
+        private void PulseSegment(int index)
         {
-            Vector3 originalScale = segment.transform.localScale;
-            Vector3 pulseScale = originalScale * 1.2f;
-            float elapsedTime = 0f;
+            // Kill any ongoing animation for this segment
+            segmentAnimations[index]?.Kill();
+            
+            Transform segmentTransform = segments[index].transform;
+            Vector3 originalScale = Vector3.one * segmentScale;
+            Vector3 pulseScaleVector = originalScale * pulseScale;
 
+            // Create new animation sequence
+            segmentAnimations[index] = DOTween.Sequence();
+            
             // Scale up
-            while (elapsedTime < pulseDuration / 2)
-            {
-                elapsedTime += Time.deltaTime;
-                float t = elapsedTime / (pulseDuration / 2);
-                segment.transform.localScale = Vector3.Lerp(originalScale, pulseScale, t);
-                yield return null;
-            }
-
-            elapsedTime = 0f;
-
+            segmentAnimations[index].Append(segmentTransform.DOScale(pulseScaleVector, animationDuration / 2)
+                .SetEase(pulseEase));
+            
             // Scale down
-            while (elapsedTime < pulseDuration / 2)
-            {
-                elapsedTime += Time.deltaTime;
-                float t = elapsedTime / (pulseDuration / 2);
-                segment.transform.localScale = Vector3.Lerp(pulseScale, originalScale, t);
-                yield return null;
-            }
-
-            segment.transform.localScale = originalScale;
+            segmentAnimations[index].Append(segmentTransform.DOScale(originalScale, animationDuration / 2)
+                .SetEase(Ease.OutQuad));
         }
 
         public void ResetChain()
@@ -114,7 +124,7 @@ namespace RoguelikeCombat.UI
             currentChain = 0;
             foreach (var segment in segments)
             {
-                segment.color = Color.gray;
+                segment.DOColor(inactiveColor, animationDuration);
             }
         }
     }
