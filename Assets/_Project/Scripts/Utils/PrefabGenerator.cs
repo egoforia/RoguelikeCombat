@@ -1,0 +1,115 @@
+using UnityEngine;
+using UnityEngine.UI;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
+
+namespace RoguelikeCombat.Utils
+{
+    public class PrefabGenerator : MonoBehaviour
+    {
+#if UNITY_EDITOR
+        [MenuItem("RoguelikeCombat/Generate UI Prefabs")]
+        public static void GenerateUIPrefabs()
+        {
+            CreateChainSegmentPrefab();
+        }
+
+        private static void CreateChainSegmentPrefab()
+        {
+            // Create the segment GameObject
+            GameObject segment = new GameObject("ChainSegment");
+            RectTransform rectTransform = segment.AddComponent<RectTransform>();
+            Image image = segment.AddComponent<Image>();
+
+            // Configure the RectTransform
+            rectTransform.anchorMin = new Vector2(0.5f, 0.5f);
+            rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
+            rectTransform.pivot = new Vector2(0.5f, 0.5f);
+            rectTransform.sizeDelta = new Vector2(30f, 30f); // Size of the segment
+
+            // Configure the Image component
+            image.sprite = CreateCircleSprite();
+            image.color = Color.gray;
+            image.type = Image.Type.Simple;
+
+            // Create the prefab
+            string prefabPath = "Assets/_Project/Prefabs/UI/ChainSegment.prefab";
+            
+            // Ensure the directory exists
+            string directory = System.IO.Path.GetDirectoryName(prefabPath);
+            if (!System.IO.Directory.Exists(directory))
+            {
+                System.IO.Directory.CreateDirectory(directory);
+            }
+
+            // Create the prefab asset
+            PrefabUtility.SaveAsPrefabAsset(segment, prefabPath);
+            DestroyImmediate(segment);
+
+            Debug.Log("Chain segment prefab created at: " + prefabPath);
+            AssetDatabase.Refresh();
+        }
+
+        private static Sprite CreateCircleSprite()
+        {
+            // Create a circular texture
+            int size = 128;
+            Texture2D texture = new Texture2D(size, size);
+            Color[] colors = new Color[size * size];
+            Vector2 center = new Vector2(size / 2f, size / 2f);
+            float radius = size / 2f;
+
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float distance = Vector2.Distance(new Vector2(x, y), center);
+                    float alpha = distance <= radius ? 1f : 0f;
+                    
+                    // Add a slight gradient for better visual
+                    if (alpha > 0f)
+                    {
+                        alpha = Mathf.Lerp(1f, 0.8f, distance / radius);
+                    }
+                    
+                    colors[y * size + x] = new Color(1f, 1f, 1f, alpha);
+                }
+            }
+
+            texture.SetPixels(colors);
+            texture.Apply();
+
+            // Save the texture as an asset
+            string texturePath = "Assets/_Project/Textures/UI/CircleSegment.png";
+            
+            // Ensure the directory exists
+            string directory = System.IO.Path.GetDirectoryName(texturePath);
+            if (!System.IO.Directory.Exists(directory))
+            {
+                System.IO.Directory.CreateDirectory(directory);
+            }
+
+            // Save the texture asset
+            byte[] pngData = texture.EncodeToPNG();
+            System.IO.File.WriteAllBytes(texturePath, pngData);
+            AssetDatabase.Refresh();
+
+            // Load and configure the texture
+            TextureImporter importer = AssetImporter.GetAtPath(texturePath) as TextureImporter;
+            if (importer != null)
+            {
+                importer.textureType = TextureImporterType.Sprite;
+                importer.spritePixelsPerUnit = 100;
+                importer.mipmapEnabled = false;
+                importer.filterMode = FilterMode.Bilinear;
+                importer.textureCompression = TextureImporterCompression.Compressed;
+                importer.SaveAndReimport();
+            }
+
+            // Create and return the sprite
+            return AssetDatabase.LoadAssetAtPath<Sprite>(texturePath);
+        }
+#endif
+    }
+}
