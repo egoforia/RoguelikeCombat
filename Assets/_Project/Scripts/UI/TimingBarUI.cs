@@ -22,18 +22,11 @@ namespace RoguelikeCombat.UI
         [SerializeField] private float pulseScale = 1.2f;
         [SerializeField] private Ease pulseEase = Ease.OutBack;
         
-        [Header("Timing Settings")]
-        [SerializeField] private float markerSpeed = 500f; // Pixels per second
-        
         private Image markerImage;
         private Image fillBarImage;
-        private float targetWidth;
-        private Sequence currentAnimation;
-        private bool isWindowActive;
-        private float windowDuration;
-        private float currentTime;
         private float startX;
         private float endX;
+        private Sequence currentAnimation;
         private Tween markerMovement;
 
         private void Awake()
@@ -55,10 +48,6 @@ namespace RoguelikeCombat.UI
 
         public void StartTimingWindow(float duration)
         {
-            windowDuration = duration;
-            currentTime = 0f;
-            isWindowActive = true;
-            
             // Reset marker position
             marker.anchoredPosition = new Vector2(startX, marker.anchoredPosition.y);
             markerImage.color = defaultColor;
@@ -74,7 +63,6 @@ namespace RoguelikeCombat.UI
 
         public void EndTimingWindow()
         {
-            isWindowActive = false;
             markerMovement?.Kill();
         }
 
