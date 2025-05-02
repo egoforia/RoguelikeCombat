@@ -1,71 +1,95 @@
 using UnityEngine;
+using UnityEngine.UI;
 using TMPro;
-using RoguelikeCombat.Combat;
+using RoguelikeCombat.UI;
 
 namespace RoguelikeCombat.UI
 {
     public class CombatUIManager : MonoBehaviour
     {
         [Header("UI References")]
-        [SerializeField] private TimingBarUI timingBarUI;
-        [SerializeField] private ChainMeterUI chainMeterUI;
-        [SerializeField] private TextMeshProUGUI chainCountText;
-        [SerializeField] private TextMeshProUGUI damageMultiplierText;
+        [SerializeField] private TimingBarUI timingBar;
+        [SerializeField] private ChainMeterUI chainMeter;
+        [SerializeField] private TextMeshProUGUI feedbackText;
+        [SerializeField] private TextMeshProUGUI chainText;
 
-        private CombatManager combatManager;
-        private TimingSystem timingSystem;
+        [Header("Chain Settings")]
+        [SerializeField] private int maxChainLength = 5;
+        [SerializeField] private float chainBreakDelay = 1.5f;
 
-        private void Awake()
+        [Header("Timing Settings")]
+        [SerializeField] private float timingWindowDuration = 2f;
+        [SerializeField] private float perfectWindowPercentage = 0.2f;
+        [SerializeField] private float goodWindowPercentage = 0.4f;
+
+        private int currentChain;
+        private float lastHitTime;
+        private bool isTimingActive;
+
+        private void Start()
         {
-            combatManager = FindObjectOfType<CombatManager>();
-            timingSystem = FindObjectOfType<TimingSystem>();
-            
-            if (timingSystem != null)
+            chainMeter.Initialize(maxChainLength);
+            feedbackText.text = "";
+            chainText.text = "Chain: 0";
+        }
+
+        private void Update()
+        {
+            // Auto-break chain if too much time has passed
+            if (currentChain > 0 && Time.time - lastHitTime > chainBreakDelay)
             {
-                timingSystem.onTimingWindowStart.AddListener(OnTimingWindowStart);
-                timingSystem.onTimingWindowEnd.AddListener(OnTimingWindowEnd);
-                timingSystem.onTimingAttempt.AddListener(OnTimingAttempt);
+                BreakChain();
             }
         }
 
-        private void OnTimingWindowStart(float duration)
+        public void StartTimingWindow()
         {
-            timingBarUI?.StartTimingWindow(duration);
+            isTimingActive = true;
+            timingBar.StartTimingWindow(timingWindowDuration);
         }
 
-        private void OnTimingWindowEnd(float accuracy)
+        public void HandleTimingInput()
         {
-            timingBarUI?.EndTimingWindow();
-            UpdateChainUI();
-        }
+            if (!isTimingActive) return;
 
-        private void OnTimingAttempt(float accuracy)
-        {
-            TimingResult result = timingSystem.GetTimingResult(accuracy);
-            timingBarUI?.ShowTimingResult(result);
-            chainMeterUI?.UpdateChainVisual(combatManager.GetCurrentChainCount(), result);
-        }
+            float result = timingBar.GetTimingResult();
+            string feedback;
+            Color feedbackColor;
 
-        private void UpdateChainUI()
-        {
-            int chainCount = combatManager.GetCurrentChainCount();
-            float multiplier = combatManager.GetCurrentDamageMultiplier();
-
-            if (chainCountText != null)
-                chainCountText.text = $"Chain: {chainCount}";
-            
-            if (damageMultiplierText != null)
-                damageMultiplierText.text = $"x{multiplier:F1}";
-        }
-
-        private void OnDestroy()
-        {
-            if (timingSystem != null)
+            if (result <= perfectWindowPercentage)
             {
-                timingSystem.onTimingWindowStart.RemoveListener(OnTimingWindowStart);
-                timingSystem.onTimingWindowEnd.RemoveListener(OnTimingWindowEnd);
-                timingSystem.onTimingAttempt.RemoveListener(OnTimingAttempt);
+                feedback = "Perfect!";
+                feedbackColor = Color.green;
+                currentChain++;
             }
+            else if (result <= goodWindowPercentage)
+            {
+                feedback = "Good";
+                feedbackColor = Color.yellow;
+                currentChain++;
+            }
+            else
+            {
+                feedback = "Miss";
+                feedbackColor = Color.red;
+                currentChain = 0;
+            }
+
+            // Update chain meter with hit result
+            chainMeter.AddHit(result);
+
+            feedbackText.text = feedback;
+            feedbackText.color = feedbackColor;
+            chainText.text = $"Chain: {currentChain}";
+            lastHitTime = Time.time;
+            isTimingActive = false;
+        }
+
+        private void BreakChain()
+        {
+            currentChain = 0;
+            chainText.text = "Chain: 0";
+            chainMeter.AddHit(1f); // Force a miss to break the chain
         }
     }
 }
